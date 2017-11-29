@@ -1,0 +1,42 @@
+CSDN博客
+
+ fireson
+
+java代码实现利用 classloader 动态加载 jar包、文件夹到classpath中
+
+发表于2011/9/9 11:22:01  1228人阅读
+
+分类： Java基础
+
+转载自BlogJava。http://www.blogjava.net/jnbzwm/archive/2011/04/01/347491.html
+
+
+在项目中实现了一个工具(独立运行的Java工程，打成jar包后 通过 java -jar **.jar 执行的。)，该工具通过配置能够实现一些业务功能，
+并且该工具提供了接口与抽象类，供其他人扩展它的功能。
+
+这就涉及到一个问题：别人在扩展它的时候，需要引入一些jar或者配置文件，本来工具依赖的jar和配置文件都记录在manifest文件中了，
+不可能别人加了jar包和配置文件就要修改manifest文件的。
+所以我为工具提供了另外一个入口，通过 该通过的配置文件 进行配置 路径，由于考虑到扩展的人可能多人或者多组，所以配置文件如下定义：
+以ext_classpath开头的，诸如 ext_classpath_biz1等对应的路径均被加入到classpath中。
+以ext_resourcepath开头的，诸如 ext_resourcepath_biz1等对应的路径均被加入classpath中。
+
+代码实现如下：
+
+
+package com.bz.utils; import java.io.File; import java.lang.reflect.Method; import java.net.URL; import java.net.URLClassLoader; import java.util.List; /** * 根据properties中配置的路径把jar和配置文件加载到classpath中。 * @author jnbzwm * */ public final class ExtClasspathLoader { /** URLClassLoader的addURL方法 */ private static Method addURL = initAddMethod(); private static URLClassLoader classloader = (URLClassLoader) ClassLoader.getSystemClassLoader(); /** * 初始化addUrl 方法. * @return 可访问addUrl方法的Method对象 */ private static Method initAddMethod() { try { Method add = URLClassLoader.class.getDeclaredMethod("addURL", new Class[] { URL.class }); add.setAccessible(true); return add; } catch (Exception e) { throw new RuntimeException(e); } } /** * 加载jar classpath。 */ public static void loadClasspath() { List<String> files = getJarFiles(); for (String f : files) { loadClasspath(f); } List<String> resFiles = getResFiles(); for (String r : resFiles) { loadResourceDir(r); } } private static void loadClasspath(String filepath) { File file = new File(filepath); loopFiles(file); } private static void loadResourceDir(String filepath) { File file = new File(filepath); loopDirs(file); } /** * 循环遍历目录，找出所有的资源路径。 * @param file 当前遍历文件 */ private static void loopDirs(File file) { // 资源文件只加载路径 if (file.isDirectory()) { addURL(file); File[] tmps = file.listFiles(); for (File tmp : tmps) { loopDirs(tmp); } } } /** * 循环遍历目录，找出所有的jar包。 * @param file 当前遍历文件 */ private static void loopFiles(File file) { if (file.isDirectory()) { File[] tmps = file.listFiles(); for (File tmp : tmps) { loopFiles(tmp); } } else { if (file.getAbsolutePath().endsWith(".jar") || file.getAbsolutePath().endsWith(".zip")) { addURL(file); } } } /** * 通过filepath加载文件到classpath。 * @param filePath 文件路径 * @return URL * @throws Exception 异常 */ private static void addURL(File file) { try { addURL.invoke(classloader, new Object[] { file.toURI().toURL() }); } catch (Exception e) { } } /** * 从配置文件中得到配置的需要加载到classpath里的路径集合。 * @return */ private static List<String> getJarFiles() { // TODO 从properties文件中读取配置信息略 return null; } /** * 从配置文件中得到配置的需要加载classpath里的资源路径集合 * @return */ private static List<String> getResFiles() { //TODO 从properties文件中读取配置信息略 return null; } public static void main(String[] args) { ExtClasspathLoader.loadClasspath(); } }
+
+0 0
+
+暂无评论，我去发表~
+
+相关博文如何在Java运行的时候动态加载一个jar包到classpath里面关于JAVA项目中CLASSPATH路径详解在linux和windows下动态设置classpath调用java类方法脚本代码如何在bat文件中查找jar包，动态设置classpath利用classloader动态加载jar包如何添加一个文件/目录到IntelliJ项目的classpath中Java中动态加载jar文件和class文件java动态加载jar包，并运行其中的类和方法Java中的类加载器（ClassLoader）及类的加载机制Fresco动态加载圆角（java代码实现）
+
+我的热门文章Java一次读取文本文件所有内容重复执行addEventListener的问题如何打印Java异常的完整堆栈内容Flex Compile ERROR:Unable to resolve resource bundle "AAA" for locale "en_US"Flex Resource Bundle 在Localization方面的应用
+
+ 未登录
+
+•首页•移动开发•架构•云计算/大数据•互联网•运维•数据库•前端•编程语言•研发管理•综合
+
+©1999-2012, csdn.net, All Rights Reserved
+
+
